@@ -34,29 +34,49 @@ function Home() {
   }
 
   useEffect(() => {
-    async function initMap() {
-      const location = await getLocation()
+    function initMap(lng, lat) {
       mapRef.current = new mapboxgl.Map({
         accessToken: import.meta.env.VITE_ACCESS_TOKEN,
         container: "map",
-        center:location/*[106.827139, -6.175389]*/,
-        zoom:zoom,
-        pitch:pitch
+        center: [lng, lat],
+        zoom: zoom,
+        pitch: pitch
       });
+
+      // Perbaikan di sini: gunakan mapRef.current
+      new mapboxgl.Marker()
+        .setLngLat([lng, lat])
+        .addTo(mapRef.current); 
     }
 
-    initMap()
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { longitude, latitude } = position.coords;
+          initMap(longitude, latitude);
+        },
+        (error) => {
+          alert("Location not found");
+          // Opsional: berikan fallback jika izin lokasi ditolak
+          initMap(106.827139, -6.175389);
+        }
+      );
+    } else {
+      initMap(106.827139, -6.175389);
+    }
 
     return () => {
-      mapRef.current.remove()
-    }
-  }, [zoom,pitch])
+      if (mapRef.current) {
+        mapRef.current.remove();
+      }
+    };
+  }, [zoom, pitch]);  
 
   return (
     <div className="h-screen">
       <div className="fixed bg-white z-30 flex flex-col right-5 top-5 rounded justify-between">
-        <button className={`${dimension == "2d" ? "bg-gray-200 rounded-t" : ""} text-xl text-gray-700 p-3`} onClick={() => changeDimension("2d")}>2D</button>
-        <button className={`${dimension == "3d" ? "bg-gray-200 rounded-b" : ""} text-xl text-gray-700 p-3`} onClick={() => changeDimension("3d")}>3D</button>
+        <button className={`${dimension == "2d" ? "bg-gray-200 rounded-t" : ""} font-medium text-xl text-gray-700 p-3 outline-0 cursor-pointer`} onClick={() => changeDimension("2d")}>2D</button>
+        <button className={`${dimension == "3d" ? "bg-gray-200 rounded-b" : ""} font-medium text-xl text-gray-700 p-3 outline-0 cursor-pointer`} onClick={() => changeDimension("3d")}>3D</button>
       </div>
       <div id='map' ref={mapContainerRef} className="h-full" />
     </div>
