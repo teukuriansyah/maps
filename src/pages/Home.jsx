@@ -1,29 +1,19 @@
 import { useRef, useEffect, useState } from 'react'
+import { getSearchList, getPlace } from "../services/Services.js"
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
-const ITEMS = [
-  { id: 1, name: "React Book", category: "Education" },
-  { id: 2, name: "Tailwind UI Kit", category: "Design" },
-  { id: 3, name: "Mechanical Keyboard", category: "Hardware" },
-  { id: 4, name: "Wireless Mouse", category: "Hardware" },
-]
-
 function Home() {
+  const token = import.meta.env.VITE_ACCESS_TOKEN
   const [dimension, setDimension] = useState("2d")
   const [zoom, setZoom] = useState(10.12)
   const [pitch, setPitch] = useState(0)
-  const mapRef = useRef()
   const [isShowList, setIsShowList] = useState(false)
+  const [myLocation, setMyLocation] = useState()
+  const [listSearch, setListSearch] = useState([])
   const [query, setQuery] = useState("")
+  const mapRef = useRef()
   const mapContainerRef = useRef()
-
-  const filteredItems = ITEMS.filter((item) => {
-    const matchesQuery = item.name
-      .toLowerCase()
-      .includes(query.toLowerCase())
-    return matchesQuery
-  })
 
   async function getLocation() {
     await Geolocation.requestPermissions()
@@ -47,26 +37,46 @@ function Home() {
     }
   }
 
-  useEffect(() => {
-    function initMap(lng, lat) {
-      mapRef.current = new mapboxgl.Map({
-        accessToken: import.meta.env.VITE_ACCESS_TOKEN,
-        container: "map",
-        center: [lng, lat],
-        zoom: zoom,
-        pitch: pitch,
-      })
+  async function getSelectedPlace(id) {
+    const data = await getPlace(id,token)
+    initMap(data,myLocation)
+    setIsShowList(false)
+  }
 
-      new mapboxgl.Marker()
-        .setLngLat([lng, lat])
-        .addTo(mapRef.current)
+  async function getAllListSearch(e) {
+    setQuery(e)
+    const data = await getSearchList(e,token)
+    setListSearch(data)
+  }
+
+  function initMap(map,location) {
+    mapRef.current = new mapboxgl.Map({
+      accessToken: token,
+      container: "map",
+      center: map,
+      zoom: zoom,
+      pitch: pitch,
+    })
+
+    new mapboxgl.Marker()
+      .setLngLat(location)
+      .addTo(mapRef.current)
+
+    if(map !== location) {
+      new mapboxgl.Marker({color:"red"})
+       .setLngLat(map)
+       .addTo(mapRef.current)
     }
+  }
 
+  useEffect(() => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { longitude, latitude } = position.coords
-          initMap(longitude, latitude)
+          const lngLat = [longitude, latitude]
+          setMyLocation(lngLat)
+          initMap(lngLat,lngLat)
         },
         (error) => {
           alert("Location not found")
@@ -88,13 +98,16 @@ function Home() {
     <div className="h-screen">
       {/* Search */}
       <div className="max-w-md mx-auto p-4 space-y-4 fixed z-10 w-full">
-        <input type="text" placeholder="Search items..." onFocus={() => setIsShowList(true)} onBlur={() => setIsShowList(false)} value={query} onChange={(e) => setQuery(e.target.value)} className="w-full px-4 py-2 border border-gray-300 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <input type="text" placeholder="Search items..." onFocus={() => setIsShowList(true)} onBlur={() => setIsShowList(false)} value={query} onChange={(e) => getAllListSearch(e.target.value)} className="w-full px-4 py-2 border border-gray-300 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
         {
           isShowList ? <ul className="divide-y divide-gray-200 border border-gray-200 rounded-lg overflow-hidden">
-          {filteredItems.length > 0 ? (
-            filteredItems.map((item) => (
-              <li key={item.id} className="p-3 flex justify-between items-center bg-white hover:bg-gray-50">
-                <span className="font-medium text-gray-800">{item.name}</span>
+          {listSearch.length > 0 ? (
+            listSearch.map((item,i) => (
+              <li key={i}>
+                <button onMouseDown={e => e.preventDefault()} onClick={() => getSelectedPlace(item.mapbox_id)} className="w-full text-left p-3 flex flex-col bg-white hover:bg-gray-50">
+                  <span className="font-medium text-gray-800">{item.name}</span>
+                  <span className="text-gray-800 text-sm">{item.full_address}</span>
+                </button>
               </li>
             ))
           ) : (
