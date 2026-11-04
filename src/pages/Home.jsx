@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
+import { Crosshair } from 'lucide-react'
 import { getSearchList, getPlace } from "../services/Services.js"
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
@@ -14,16 +15,6 @@ function Home() {
   const [query, setQuery] = useState("")
   const mapRef = useRef()
   const mapContainerRef = useRef()
-
-  async function getLocation() {
-    await Geolocation.requestPermissions()
-    const coordinates = await Geolocation.getCurrentPosition({
-      enableHighAccuracy: true,
-      timeout: 10000,
-    })
-
-    return [coordinates.coords.longitude, coordinates.coords.latitude]
-  }
 
   function changeDimension(d) {
     if (d == "2d") {
@@ -43,6 +34,11 @@ function Home() {
     setIsShowList(false)
   }
 
+  async function getMyPlace() {
+    initMap(myLocation,myLocation)
+    setIsShowList(false)
+  }
+
   async function getAllListSearch(e) {
     setQuery(e)
     const data = await getSearchList(e,token)
@@ -53,7 +49,6 @@ function Home() {
     mapRef.current = new mapboxgl.Map({
       accessToken: token,
       container: "map",
-      style: "mapbox://styles/mapbox/streets-v12",
       center: map,
       zoom: zoom,
       pitch: pitch,
@@ -124,6 +119,11 @@ function Home() {
           )}
         </ul> : null
         }
+      </div>
+
+      {/* My location */}
+      <div className="fixed bg-white z-40 flex flex-col right-5 bottom-35 rounded justify-between">
+        <button className={`rounded-t font-medium text-xl text-gray-700 p-3 outline-0 cursor-pointer`} onClick={() => getMyPlace()}><Crosshair/></button>
       </div>
 
       {/* Dimension map */}
