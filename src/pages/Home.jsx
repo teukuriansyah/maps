@@ -53,9 +53,18 @@ function Home() {
     mapRef.current = new mapboxgl.Map({
       accessToken: token,
       container: "map",
+      style: "mapbox://styles/mapbox/streets-v12",
       center: map,
       zoom: zoom,
       pitch: pitch,
+    })
+
+    mapRef.current.on("load", () => {
+      console.log("Map style berhasil dimuat")
+    })
+
+    mapRef.current.on("error", (e) => {
+      console.error("Mapbox error:", e.error)
     })
 
     new mapboxgl.Marker()
